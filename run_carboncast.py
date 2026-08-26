@@ -33,6 +33,9 @@ def load_carboncast(region: str) -> pd.DataFrame:
                                   f"{region}_direct_96hr_CI_forecasts_0.csv"),
                      parse_dates=["datetime"])
     df["datetime"] = pd.to_datetime(df["datetime"]).dt.tz_localize(None)
+    # overlapping 96h rolling windows: each hour appears once per window; keep the
+    # last (freshest, shortest-horizon) forecast for each hour
+    df = df.sort_values("datetime").drop_duplicates("datetime", keep="last")
     return df.set_index("datetime").sort_index()
 
 
