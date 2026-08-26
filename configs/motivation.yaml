@@ -1,0 +1,8 @@
+# Motivation experiment (paper Fig 2): concordance vs MAPE for scheduling
+experiment: motivation
+cache_dir: ~/litecast_data
+region: ERCO          # Texas, the paper's Fig 2 region
+job_length: 3
+slack: 24
+n_windows: 60
+seed: 0

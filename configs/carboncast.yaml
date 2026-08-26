@@ -1,0 +1,30 @@
+# LiteCast reproduction — CarbonCast CNN-LSTM comparison
+experiment: carboncast
+cache_dir: ~/litecast_data
+regions:
+  - CISO
+  - ERCO
+  - DE
+  - NL
+  - ISNE
+  - NYISO
+  - PJM
+  - BPAT
+  - FPL
+  - ES
+  - PL
+  - SE
+  - AUS_QLD
+
+train_days: 7
+horizon: 96             # CarbonCast pretrained models forecast 96h windows
+use_weather: true
+use_demand: true
+use_time: true
+
+job_lengths: [3, 12, 24, 48]
+slacks: [24, 48, 96]
+modes: [continuous, interruptible]
+step_days: 1
+
+n_workers: 13

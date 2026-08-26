@@ -53,10 +53,10 @@ Each branch runs `bash run_experiment.sh`, which dispatches on the `experiment:`
 
 ```sh
 pip install -r requirements.txt
-python run.py --config config.yaml            # baseline (LiteCast vs persistence vs oracle)
-python run_carboncast.py --config config.yaml # vs real CarbonCast CNN-LSTM
-python run_heuristic.py --config config.yaml  # Algorithm 1 heuristic
-python run_motivation.py --config config.yaml # paper Fig 2 concordance-vs-MAPE
+python run.py --config configs/baseline.yaml            # baseline (LiteCast vs persistence vs oracle)
+python run_carboncast.py --config configs/carboncast.yaml # vs real CarbonCast CNN-LSTM
+python run_heuristic.py --config configs/heuristic.yaml  # Algorithm 1 heuristic
+python run_motivation.py --config configs/motivation.yaml # paper Fig 2 concordance-vs-MAPE
 ```
 
 Interactive tutorial: open `notebooks/litecast_reproduction.py` with `marimo edit` or `marimo run`.
