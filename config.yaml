@@ -1,26 +1,24 @@
-# LiteCast heuristic (Algorithm 1) — compare regular vs heuristic scheduling
+# LiteCast heuristic (Algorithm 1) — MINIMAL: 2 regions, weekly origins, 24h retrain
 experiment: heuristic
 cache_dir: ~/litecast_data
 regions:
   - CISO
   - ERCO
-  - DE
-  - NL
 
 test_start: 2021-01-01
 test_end: 2021-12-31
-step_days: 3
+step_days: 14
 train_days: 7
-horizon: 216
+horizon: 200
 use_weather: true
 use_demand: true
 use_time: true
 
-job_lengths: [3, 12, 24, 48]
+job_lengths: [3, 12]
 slacks: [24, 96, 168]
 modes: [continuous, interruptible]
 retrain_every: 24
 only_short_jobs: true
 
-n_workers: 4
+n_workers: 2
 out_csv: results/heuristic_scheduling.csv
