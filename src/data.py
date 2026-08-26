@@ -84,6 +84,11 @@ def load_region(cache_dir: str, region: str) -> dict[str, pd.DataFrame]:
     da = pd.read_csv(download(cache_dir, region, "96hr"),
                      parse_dates=["UTC time"]).set_index("UTC time").sort_index()
 
+    # normalize tz-aware UTC timestamps to naive UTC for consistent arithmetic
+    for frame in (ci, da):
+        if frame.index.tz is not None:
+            frame.index = frame.index.tz_localize(None)
+
     for col in MIX_COLUMNS + ["carbon_intensity"]:
         if col in ci.columns:
             ci[col] = pd.to_numeric(ci[col], errors="coerce")
