@@ -1,37 +1,8 @@
-# LiteCast reproduction — baseline experiment config
+# Motivation experiment (paper Fig 2): concordance vs MAPE for scheduling
+experiment: motivation
 cache_dir: ~/litecast_data
-regions:
-  - CISO      # California (paper headline)
-  - ERCO      # Texas (paper headline)
-  - DE        # Germany (paper headline)
-  - NL        # Netherlands (high-wind EU proxy for Denmark, not in CarbonCast data)
-  - ISNE      # New England
-  - NYISO     # New York
-  - PJM
-  - BPAT
-  - FPL       # Florida
-  - ES        # Spain
-  - PL        # Poland
-  - SE        # Sweden
-  - AUS_QLD
-
-test_start: 2021-01-01
-test_end: 2021-12-31
-step_days: 1
-train_days: 7          # LiteCast requires only ~7 days of history
-horizon: 216           # cover max slack 168 + max length 48 scheduling window
-
-model: direct          # direct: SARIMAX on carbon intensity; mix: per-source mix
-use_weather: true
-use_demand: true
-use_time: true
-
-job_lengths: [3, 12, 24, 48]
-slacks: [24, 96, 168]
-modes: [continuous, interruptible]
-
-# persistence baseline compared in the same run
-compare_persistence: true
-
-n_workers: 13
-out_csv: results/baseline_scheduling.csv
+region: ERCO          # Texas, the paper's Fig 2 region
+job_length: 3
+slack: 24
+n_windows: 60
+seed: 0
