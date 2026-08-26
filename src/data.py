@@ -39,10 +39,32 @@ WEATHER_COLUMNS = [
     "forecast_avg_precipitation_wMean",
 ]
 
+# Which DA file a region uses varies in the CarbonCast repo.
+DA_FILE_CANDIDATES = ["96hr_forecasts_DA", "96hr_forecasts"]
+
 
 def download(cache_dir: str, region: str, kind: str) -> str:
     """Return the local path to a region's CSV, downloading it if needed."""
     os.makedirs(cache_dir, exist_ok=True)
+    if kind.startswith("96hr"):
+        # try each candidate filename until one exists
+        for cand in DA_FILE_CANDIDATES:
+            fname = f"{region}_{cand}.csv"
+            dst = os.path.join(cache_dir, fname)
+            if os.path.exists(dst) and os.path.getsize(dst) > 0:
+                return dst
+            url = f"{RAW_BASE}/{region}/{fname}"
+            import urllib.request
+
+            try:
+                print(f"[data] fetching {url}")
+                urllib.request.urlretrieve(url, dst)
+                return dst
+            except Exception:  # noqa: BLE001
+                if os.path.exists(dst):
+                    os.remove(dst)
+                continue
+        raise FileNotFoundError(f"no DA file found for region {region}")
     fname = f"{region}_{kind}.csv"
     dst = os.path.join(cache_dir, fname)
     if os.path.exists(dst) and os.path.getsize(dst) > 0:
@@ -59,7 +81,7 @@ def load_region(cache_dir: str, region: str) -> dict[str, pd.DataFrame]:
     """Load carbon intensity + mix and the day-ahead exogenous forecast frame."""
     ci = pd.read_csv(download(cache_dir, region, "direct_emissions"),
                      parse_dates=["UTC time"]).set_index("UTC time").sort_index()
-    da = pd.read_csv(download(cache_dir, region, "96hr_forecasts_DA"),
+    da = pd.read_csv(download(cache_dir, region, "96hr"),
                      parse_dates=["UTC time"]).set_index("UTC time").sort_index()
 
     for col in MIX_COLUMNS + ["carbon_intensity"]:
@@ -70,6 +92,12 @@ def load_region(cache_dir: str, region: str) -> dict[str, pd.DataFrame]:
     for col in da.columns:
         da[col] = pd.to_numeric(da[col], errors="coerce")
     da = da.ffill()
+
+    # Demand forecast: explicit column if present, else derive a proxy from the
+    # sum of the source-production forecasts (only CISO ships a demand column).
+    if DEMAND_COLUMNS[0] not in da.columns:
+        prod_cols = [c for c in da.columns if c.startswith("avg_") and c.endswith("_production_forecast")]
+        da[DEMAND_COLUMNS[0]] = da[prod_cols].sum(axis=1) if prod_cols else 0.0
 
     return {"ci": ci, "da": da}
 

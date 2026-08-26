@@ -30,9 +30,13 @@ def _exog_frame(da: pd.DataFrame, idx: pd.DatetimeIndex,
             "dow_cos": np.cos(2 * np.pi * d / 7),
         }, index=idx))
     if use_weather:
-        feats.append(da[WEATHER_COLUMNS].reindex(idx))
+        wcols = [c for c in WEATHER_COLUMNS if c in da.columns]
+        if wcols:
+            feats.append(da[wcols].reindex(idx))
     if use_demand:
-        feats.append(da[DEMAND_COLUMNS].reindex(idx))
+        dcols = [c for c in DEMAND_COLUMNS if c in da.columns]
+        if dcols:
+            feats.append(da[dcols].reindex(idx))
     if not feats:
         return pd.DataFrame(index=idx)
     return pd.concat(feats, axis=1)
