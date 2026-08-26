@@ -85,7 +85,8 @@ def load_region(cache_dir: str, region: str) -> dict[str, pd.DataFrame]:
                      parse_dates=["UTC time"]).set_index("UTC time").sort_index()
 
     for col in MIX_COLUMNS + ["carbon_intensity"]:
-        ci[col] = pd.to_numeric(ci[col], errors="coerce")
+        if col in ci.columns:
+            ci[col] = pd.to_numeric(ci[col], errors="coerce")
     ci = ci[~ci.index.duplicated()]
 
     da = da[~da.index.duplicated()]

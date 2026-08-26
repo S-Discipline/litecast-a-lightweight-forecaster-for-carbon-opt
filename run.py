@@ -129,6 +129,10 @@ def main():
     regions = cfg.get("regions", REGIONS)
     n_workers = min(cfg.get("n_workers", 4), len(regions))
 
+    # pre-download all region data in the main process (workers must not download)
+    for r in regions:
+        load_region(cache_dir, r)
+
     results = []
     with ProcessPoolExecutor(max_workers=n_workers) as ex:
         futs = {ex.submit(run_region, cfg, r, cache_dir): r for r in regions}
