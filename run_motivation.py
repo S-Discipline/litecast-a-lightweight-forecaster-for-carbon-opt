@@ -39,20 +39,26 @@ def make_variants(actual: np.ndarray, seed: int = 0) -> dict[str, np.ndarray]:
     out = {}
     # 1) oracle
     out["oracle"] = actual.copy()
-    # 2) high concordance, inflated MAPE: scale + small ordering-preserving noise
-    out["highCI_highMAPE"] = actual * 0.75 + 60 + rng.normal(0, 12, actual.shape)
-    # 3) low concordance, low MAPE: small noise but frequent pairwise flips
-    base = actual + rng.normal(0, 4, actual.shape)
-    out["lowCI_lowMAPE"] = base
-    # 4) shuffled forecasts with controlled concordance
+    # 2) high concordance, inflated MAPE: monotonic transform (scale+shift) keeps
+    #    ordering essentially intact while pushing the pointwise error up
+    out["highCI_highMAPE"] = actual * 0.7 + 40 + rng.normal(0, 2, actual.shape)
+    # 3) low concordance, low MAPE: tiny additive noise then swap adjacent pairs
+    #    to break ordering while keeping pointwise values near the truth
+    base = actual + rng.normal(0, 2, actual.shape)
+    flipped = base.copy()
+    n_swap = int(0.6 * len(actual))
+    for k in range(n_swap):
+        i = rng.integers(0, len(actual) - 1)
+        flipped[i], flipped[i + 1] = flipped[i + 1], flipped[i]
+    out["lowCI_lowMAPE"] = flipped
+    # 4) shuffled forecasts with controlled concordance (pairwise swaps)
     for frac in (0.2, 0.4, 0.6):
-        idx = np.arange(actual.shape[0])
-        rng.shuffle(idx)
-        swap_n = int(frac * len(idx))
         shuffled = base.copy()
-        pick = rng.choice(len(idx), 2 * swap_n, replace=False)
-        a, b = pick[:swap_n], pick[swap_n:swap_n + swap_n]
-        shuffled[a], shuffled[b] = shuffled[b], shuffled[a]
+        swap_n = int(frac * len(actual) / 2)
+        perm = rng.permutation(len(actual))
+        for k in range(swap_n):
+            i, j = perm[2 * k], perm[2 * k + 1]
+            shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
         out[f"shuffle{int(frac*100)}"] = shuffled
     return out
 
