@@ -133,33 +133,39 @@ def run_region(cfg: dict, region: str, cache_dir: str) -> dict:
                 np.sort(np.argsort(a.values[:min(len(a), T + L)], kind="stable")[:L])
             e_oracle = a.iloc[h_oracle:h_oracle + L].sum() if m == "continuous" else a.iloc[h_oracle].sum()
 
-            # Algorithm 1: update schedule while job waits
-            best_ci = concordance_index(a, base_fc)
-            best_fc = base_fc
-            chosen = h if m == "interruptible" else None
+            # Algorithm 1 (paper-faithful): compare each retrained forecast against
+            # the ARRIVAL forecast. Update only if new CI (over the scheduling
+            # window) exceeds the arrival CI AND the new schedule's predicted
+            # emissions are below the arrival schedule's predicted emissions.
+            win = min(T + L, len(a))
+            a_win = a.iloc[:win]
+            arrival_ci = concordance_index(a_win, base_fc.iloc[:win])
+            if m == "continuous":
+                arrival_start = h
+                arrival_pred_cost = base_fc.iloc[arrival_start:arrival_start + L].sum()
+            else:
+                chosen = h
+                arrival_pred_cost = base_fc.iloc[chosen].sum()
             for t in retrain_fcs:
-                if t >= T + L:
+                if t >= win:
                     continue
                 new_fc = retrain_fcs[t]
-                new_ci = concordance_index(a, new_fc)
-                if new_ci > best_ci:
-                    if m == "continuous":
-                        cand = schedule_continuous(new_fc, L, T)
-                        cur_cost = best_fc.iloc[h:h + L].sum()
-                        cand_cost = new_fc.iloc[cand:cand + L].sum()
-                        if cand_cost < cur_cost:
-                            best_fc = new_fc
-                            h = cand
-                            best_ci = new_ci
-                    else:
-                        cand = np.sort(np.argsort(
-                            new_fc.values[:min(len(new_fc), T + L)], kind="stable")[:L])
-                        cur_cost = best_fc.iloc[chosen].sum()
-                        cand_cost = new_fc.iloc[cand].sum()
-                        if cand_cost < cur_cost:
-                            best_fc = new_fc
-                            chosen = cand
-                            best_ci = new_ci
+                new_ci = concordance_index(a_win, new_fc.iloc[:win])
+                if new_ci <= arrival_ci:
+                    continue
+                if m == "continuous":
+                    cand = schedule_continuous(new_fc, L, T)
+                    cand_cost = new_fc.iloc[cand:cand + L].sum()
+                    if cand_cost < arrival_pred_cost:
+                        best_fc = new_fc
+                        h = cand
+                else:
+                    cand = np.sort(np.argsort(
+                        new_fc.values[:min(len(new_fc), T + L)], kind="stable")[:L])
+                    cand_cost = new_fc.iloc[cand].sum()
+                    if cand_cost < arrival_pred_cost:
+                        best_fc = new_fc
+                        chosen = cand
             if m == "continuous":
                 e_pred_heuristic = a.iloc[h:h + L].sum()
             else:
