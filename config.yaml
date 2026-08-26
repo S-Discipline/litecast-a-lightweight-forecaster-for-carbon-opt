@@ -1,8 +1,26 @@
-# Motivation experiment (paper Fig 2): concordance vs MAPE for scheduling
-experiment: motivation
+# LiteCast heuristic (Algorithm 1) — compare regular vs heuristic scheduling
+experiment: heuristic
 cache_dir: ~/litecast_data
-region: ERCO          # Texas, the paper's Fig 2 region
-job_length: 3
-slack: 24
-n_windows: 60
-seed: 0
+regions:
+  - CISO
+  - ERCO
+  - DE
+  - NL
+
+test_start: 2021-01-01
+test_end: 2021-12-31
+step_days: 3
+train_days: 7
+horizon: 216
+use_weather: true
+use_demand: true
+use_time: true
+
+job_lengths: [3, 12, 24, 48]
+slacks: [24, 96, 168]
+modes: [continuous, interruptible]
+retrain_every: 6
+only_short_jobs: true
+
+n_workers: 4
+out_csv: results/heuristic_scheduling.csv
