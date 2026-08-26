@@ -54,6 +54,8 @@ def run_region(cfg: dict, region: str, cache_dir: str) -> dict:
     test_start = pd.Timestamp(cfg["test_start"])
     test_end = pd.Timestamp(cfg["test_end"])
     origins = pd.date_range(start=test_start, end=test_end, freq=f"{step_days}D")
+    max_origin = ci.index.max() - pd.Timedelta(hours=horizon)
+    origins = origins[origins <= max_origin]
     max_T = max(slacks)
 
     agg = {}
@@ -79,6 +81,8 @@ def run_region(cfg: dict, region: str, cache_dir: str) -> dict:
             continue
 
         for (L, T, m) in agg["regular"]:
+            if a[:T + L].notna().sum() < T + L:
+                continue
             if m == "continuous":
                 h_regular = schedule_continuous(base_fc, L, T)
                 h_oracle = schedule_continuous(a, L, T)
@@ -108,13 +112,15 @@ def run_region(cfg: dict, region: str, cache_dir: str) -> dict:
                 continue
 
         for (L, T, m) in agg["heuristic"]:
+            if a[:T + L].notna().sum() < T + L:
+                continue
             if only_short and L >= 24:
                 # reuse the regular result for long jobs (heuristic marginal)
                 agg["heuristic"][(L, T, m)]["e_pred"] += agg["regular"][(L, T, m)]["e_pred"]
                 agg["heuristic"][(L, T, m)]["e_oracle"] += agg["regular"][(L, T, m)]["e_oracle"]
                 agg["heuristic"][(L, T, m)]["n"] += 1
                 continue
-            # base schedule
+            # base schedule: for continuous keep start hour, for interruptible keep the set
             if m == "continuous":
                 h = schedule_continuous(base_fc, L, T)
                 e_pred = a.iloc[h:h + L].sum()
@@ -130,24 +136,34 @@ def run_region(cfg: dict, region: str, cache_dir: str) -> dict:
             # Algorithm 1: update schedule while job waits
             best_ci = concordance_index(a, base_fc)
             best_fc = base_fc
+            chosen = h if m == "interruptible" else None
             for t in retrain_fcs:
                 if t >= T + L:
                     continue
                 new_fc = retrain_fcs[t]
                 new_ci = concordance_index(a, new_fc)
                 if new_ci > best_ci:
-                    cand = schedule_continuous(new_fc, L, T) if m == "continuous" else \
-                        np.sort(np.argsort(new_fc.values[:min(len(new_fc), T + L)], kind="stable")[:L])
-                    cur_cost = best_fc.iloc[h:h + L].sum() if m == "continuous" else best_fc.iloc[h].sum()
-                    cand_cost = new_fc.iloc[cand:cand + L].sum() if m == "continuous" else new_fc.iloc[cand].sum()
-                    if cand_cost < cur_cost:
-                        best_fc = new_fc
-                        h = cand if m == "continuous" else cand[0]
-                        best_ci = new_ci
+                    if m == "continuous":
+                        cand = schedule_continuous(new_fc, L, T)
+                        cur_cost = best_fc.iloc[h:h + L].sum()
+                        cand_cost = new_fc.iloc[cand:cand + L].sum()
+                        if cand_cost < cur_cost:
+                            best_fc = new_fc
+                            h = cand
+                            best_ci = new_ci
+                    else:
+                        cand = np.sort(np.argsort(
+                            new_fc.values[:min(len(new_fc), T + L)], kind="stable")[:L])
+                        cur_cost = best_fc.iloc[chosen].sum()
+                        cand_cost = new_fc.iloc[cand].sum()
+                        if cand_cost < cur_cost:
+                            best_fc = new_fc
+                            chosen = cand
+                            best_ci = new_ci
             if m == "continuous":
                 e_pred_heuristic = a.iloc[h:h + L].sum()
             else:
-                e_pred_heuristic = a.iloc[h].sum()
+                e_pred_heuristic = a.iloc[chosen].sum()
             agg["heuristic"][(L, T, m)]["e_pred"] += e_pred_heuristic
             agg["heuristic"][(L, T, m)]["e_oracle"] += e_oracle
             agg["heuristic"][(L, T, m)]["n"] += 1

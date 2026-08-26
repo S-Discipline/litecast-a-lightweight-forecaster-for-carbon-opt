@@ -54,6 +54,10 @@ def run_region(cfg: dict, region: str, cache_dir: str) -> dict:
     persistence = Persistence(horizon=horizon)
 
     origins = pd.date_range(start=test_start, end=test_end, freq=f"{step_days}D")
+    # keep origins whose full scheduling horizon is covered by actual data, so no
+    # window contains NaN (pandas sum would silently skip NaNs and bias results)
+    max_origin = ci.index.max() - pd.Timedelta(hours=horizon)
+    origins = origins[origins <= max_origin]
 
     mapes = {"litecast": [], "persistence": []}
     cis = {"litecast": [], "persistence": []}
@@ -98,7 +102,7 @@ def run_region(cfg: dict, region: str, cache_dir: str) -> dict:
             for (L, T, m) in keys:
                 wf = f[:T + L]
                 wa = a[:T + L]
-                if len(wa) < T + L:
+                if len(wa) < T + L or wa.notna().sum() < T + L:
                     continue
                 e_pred, e_oracle = evaluate_schedule(wf, wa, L, T, m)
                 agg[name][(L, T, m)]["e_pred"] += e_pred
