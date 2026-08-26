@@ -10,11 +10,14 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import warnings
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
 import pandas as pd
 import yaml
+
+warnings.filterwarnings("ignore")  # keep the run log readable (statsmodels convergence spam)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
