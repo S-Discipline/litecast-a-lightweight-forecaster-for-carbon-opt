@@ -19,7 +19,7 @@ use_time: true
 job_lengths: [3, 12, 24, 48]
 slacks: [24, 96, 168]
 modes: [continuous, interruptible]
-retrain_every: 6
+retrain_every: 24
 only_short_jobs: true
 
 n_workers: 4
